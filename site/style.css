@@ -224,3 +224,99 @@ footer {
         padding: 60px 6%;
     }
 }
+
+
+/* Individual Member Profile Pages */
+
+.profile-page {
+    min-height: 80vh;
+    padding: 70px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0b1120, #142c49);
+}
+
+.profile-card {
+    width: 100%;
+    max-width: 650px;
+    padding: 45px;
+    background: #142035;
+    border: 1px solid #26344d;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 25px;
+    display: grid;
+    place-items: center;
+    background: #075985;
+    border: 3px solid #38bdf8;
+    border-radius: 50%;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.profile-card h1 {
+    color: white;
+    font-size: 32px;
+    margin-bottom: 5px;
+}
+
+.profile-card .role {
+    color: #38bdf8;
+    font-size: 17px;
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+.profile-divider {
+    height: 1px;
+    background: #334155;
+    margin: 25px 0;
+}
+
+.profile-card h2 {
+    color: white;
+    font-size: 21px;
+    margin: 25px 0 10px;
+}
+
+.profile-card p:not(.role):not(.section-label) {
+    color: #aab8ca;
+    line-height: 1.8;
+}
+
+.profile-card ul {
+    text-align: left;
+    max-width: 400px;
+    margin: 15px auto 30px;
+    color: #aab8ca;
+}
+
+.profile-card li {
+    padding: 7px 0;
+}
+
+.profile-card li::marker {
+    color: #38bdf8;
+}
+
+.profile-card .hero-button {
+    margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+    .profile-card {
+        padding: 30px 20px;
+    }
+
+    .profile-card h1 {
+        font-size: 26px;
+    }
+}
