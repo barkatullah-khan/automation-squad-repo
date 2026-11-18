@@ -1,4 +1,3 @@
-
 name: Deploy Website
 
 on:
@@ -52,8 +51,8 @@ jobs:
 
       - name: Configure SSH
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.AUTOMATION_SQUAD_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AUTOMATION_SQUAD_SSH_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -68,6 +67,10 @@ jobs:
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
         run: |
+          : "${DEPLOY_HOST:?DEPLOY_HOST variable is empty or missing}"
+
+          echo "Connecting to deployment server: $DEPLOY_HOST"
+
           ssh -i ~/.ssh/deploy_key \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
@@ -93,8 +96,8 @@ jobs:
     steps:
       - name: Configure SSH
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.AUTOMATION_SQUAD_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AUTOMATION_SQUAD_SSH_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -111,7 +114,11 @@ jobs:
           DEPLOY_COMMIT: ${{ github.sha }}
           DEPLOY_ACTOR: ${{ github.actor }}
         run: |
+          : "${DEPLOY_HOST:?DEPLOY_HOST variable is empty or missing}"
+
           DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "Connecting to deployment server: $DEPLOY_HOST"
 
           ssh -i ~/.ssh/deploy_key \
             -o IdentitiesOnly=yes \
@@ -133,6 +140,8 @@ jobs:
         env:
           DOMAIN: ${{ vars.DOMAIN }}
         run: |
+          : "${DOMAIN:?DOMAIN variable is empty or missing}"
+
           curl --fail --location --silent --show-error \
             --retry 10 \
             --retry-delay 6 \
