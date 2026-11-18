@@ -15,8 +15,8 @@ jobs:
     steps:
       - name: Configure SSH
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.AUTOMATION_SQUAD_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AUTOMATION_SQUAD_SSH_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
