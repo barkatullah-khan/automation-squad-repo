@@ -1,0 +1,84 @@
+
+name: Rollback Website
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Execute Rollback
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run rollback script
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy@"$DEPLOY_HOST" \
+            "bash /opt/automation-squad/scripts/rollback.sh"
+
+  verify:
+    name: Verify Rollback
+    needs: rollback
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check website
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          curl --fail --location --silent --show-error \
+            "https://$DOMAIN/" -o response.html
+
+          echo "Rollback website check passed."
+
+  notify:
+    name: Send Slack Notification
+    needs: [rollback, verify]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send rollback result
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ROLLBACK_STATUS: ${{ needs.rollback.result }}
+          VERIFY_STATUS: ${{ needs.verify.result }}
+          USER: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$ROLLBACK_STATUS" = "success" ] && [ "$VERIFY_STATUS" = "success" ]; then
+            MESSAGE="Rollback successful"
+          else
+            MESSAGE="Rollback failed"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg text "$MESSAGE | By: $USER | Run: $RUN_URL" \
+            '{text: $text}')
+
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data "$PAYLOAD" \
+            "$SLACK_WEBHOOK_URL"
