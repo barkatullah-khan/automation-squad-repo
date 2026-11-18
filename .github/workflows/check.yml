@@ -1,0 +1,33 @@
+
+name: Check Website
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checkout:
+    name: Checkout Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+  validate:
+    name: Validate Website
+    needs: checkout
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run website checks
+        run: |
+          chmod +x scripts/check-site.sh
+          ./scripts/check-site.sh site
