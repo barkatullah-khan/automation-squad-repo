@@ -1,0 +1,164 @@
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Prevent simultaneous production deployments.
+concurrency:
+  group: website-production-deploy
+  cancel-in-progress: false
+
+jobs:
+
+  # JOB 1: Get repository code
+  checkout:
+    name: Checkout Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload website and scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-files
+          path: |
+            site/
+            scripts/
+          if-no-files-found: error
+          retention-days: 1
+
+  # JOB 2: Upload files to the server
+  upload:
+    name: Upload Website
+    needs: checkout
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build files
+        uses: actions/download-artifact@v4
+        with:
+          name: website-files
+          path: .
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.AUTOMATION_SQUAD_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AUTOMATION_SQUAD_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload website and scripts
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          : "${DEPLOY_HOST:?DEPLOY_HOST variable is empty or missing}"
+
+          echo "Connecting to deployment server: $DEPLOY_HOST"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy@"$DEPLOY_HOST" \
+            "mkdir -p /opt/automation-squad/upload/site /opt/automation-squad/upload/scripts"
+
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            site/ \
+            deploy@"$DEPLOY_HOST":/opt/automation-squad/upload/site/
+
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            scripts/ \
+            deploy@"$DEPLOY_HOST":/opt/automation-squad/upload/scripts/
+
+  # JOB 3: Execute deployment script
+  deploy:
+    name: Run Deployment
+    needs: upload
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.AUTOMATION_SQUAD_DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AUTOMATION_SQUAD_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Execute deployment script
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+          DEPLOY_ACTOR: ${{ github.actor }}
+        run: |
+          : "${DEPLOY_HOST:?DEPLOY_HOST variable is empty or missing}"
+
+          DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "Connecting to deployment server: $DEPLOY_HOST"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy@"$DEPLOY_HOST" \
+            "DEPLOY_COMMIT='$DEPLOY_COMMIT' \
+             DEPLOY_ACTOR='$DEPLOY_ACTOR' \
+             DEPLOY_TIME='$DEPLOY_TIME' \
+             bash /opt/automation-squad/upload/scripts/deploy.sh"
+
+  # JOB 4: Verify website
+  health-check:
+    name: Verify Website
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check HTTPS website
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          : "${DOMAIN:?DOMAIN variable is empty or missing}"
+
+          curl --fail --location --silent --show-error \
+            --retry 10 \
+            --retry-delay 6 \
+            --retry-connrefused \
+            "https://$DOMAIN/" \
+            -o response.html
+
+          echo "Website HTTPS check passed."
+
+      - name: Verify deployed commit
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          curl --fail --location --silent --show-error \
+            "https://$DOMAIN/deployment-info.txt" \
+            -o deployment-info.txt
+
+          grep -Fq "${GITHUB_SHA}" deployment-info.txt
+
+          echo "Deployment commit verified successfully."
