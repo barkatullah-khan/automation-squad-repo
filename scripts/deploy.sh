@@ -41,7 +41,8 @@ echo "Backup created: $BACKUP"
 
 # Update deployment scripts
 if [ -d "$STAGING/scripts" ]; then
-    rsync -a "$STAGING/scripts/" "$SCRIPTS/"
+    rsync -r --no-perms --no-owner --no-group \
+        "$STAGING/scripts/" "$SCRIPTS/"
 fi
 
 # Deploy the new website
