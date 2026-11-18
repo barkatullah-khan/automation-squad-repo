@@ -48,7 +48,7 @@ fi
 # Deploy the new website
 echo "Deploying website..."
 
-if ! rsync -a --delete \
+if ! rsync -r --delete \
     "$STAGING/site/" \
     "$LIVE_SITE/"; then
 
