@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
@@ -48,7 +47,7 @@ fi
 # Deploy the new website
 echo "Deploying website..."
 
-if ! rsync -r --delete \
+if ! rsync -r --delete --exclude='/live/' \
     "$STAGING/site/" \
     "$LIVE_SITE/"; then
 
@@ -67,6 +66,11 @@ Commit: $COMMIT
 Deployed by: $ACTOR
 Deployment time: $DEPLOYED_AT
 EOF
+
+# Generate live status page
+echo "Generating live status page..."
+
+bash "$SCRIPTS/status.sh"
 
 echo "Deployment completed successfully."
 echo "Backup: $BACKUP"
