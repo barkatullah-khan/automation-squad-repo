@@ -76,7 +76,9 @@ bash "$SCRIPTS/status.sh"
 echo "Generating traffic report..."
 
 bash "$SCRIPTS/traffic-report.sh"
-
+# Install/update monitoring cron jobs
+echo "Installing monitoring cron jobs..."
+sudo /usr/local/sbin/automation-squad-install-cron
 echo "Deployment completed successfully."
 echo "Backup: $BACKUP"
 echo "Commit: $COMMIT"
