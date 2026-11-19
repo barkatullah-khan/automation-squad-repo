@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
 
-    <title>{{TEAM_NAME}} - Traffic Report</title>
+    <title>{{TEAM_NAME}} | Traffic Analytics</title>
 
     <style>
         * {
@@ -15,83 +15,184 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --background: #080f1d;
+            --panel: #111c2e;
+            --panel-light: #17243a;
+            --border: #263750;
+            --primary: #38bdf8;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --danger: #fb7185;
+            --success: #34d399;
+        }
+
         body {
             font-family: Arial, Helvetica, sans-serif;
-            background: #0b1120;
-            color: #e5e7eb;
+            background: var(--background);
+            color: var(--text);
             line-height: 1.6;
-            padding: 30px;
+            min-height: 100vh;
+            padding: 30px 20px;
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1150px;
             margin: auto;
         }
 
         header {
-            background: #111b2e;
-            border: 1px solid #26344d;
-            border-radius: 14px;
-            padding: 25px;
+            background: linear-gradient(135deg, #14243b, #101a2b);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
             margin-bottom: 25px;
         }
 
+        .top-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .brand {
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .live-indicator {
+            color: var(--success);
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .live-indicator::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
         h1 {
-            color: #38bdf8;
+            font-size: clamp(25px, 4vw, 34px);
+            color: #f8fafc;
             margin-bottom: 8px;
         }
 
-        h2 {
-            color: #38bdf8;
-            font-size: 19px;
-            margin-bottom: 18px;
-        }
-
         .subtitle {
-            color: #94a3b8;
-            margin-bottom: 15px;
+            color: var(--muted);
+            font-size: 14px;
         }
 
-        .navigation a {
-            color: #38bdf8;
+        .header-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .navigation {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            display: inline-block;
+            padding: 10px 17px;
+            border-radius: 8px;
             text-decoration: none;
-            margin-right: 18px;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.2s ease;
         }
 
-        .navigation a:hover {
-            text-decoration: underline;
+        .main-button {
+            background: var(--primary);
+            color: #08111f;
+        }
+
+        .main-button:hover {
+            background: #7dd3fc;
+            transform: translateY(-2px);
+        }
+
+        .status-button {
+            background: var(--panel-light);
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+
+        .status-button:hover {
+            border-color: var(--primary);
+        }
+
+        .generated {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .section-heading {
+            font-size: 18px;
+            margin: 30px 0 15px;
+            color: #f1f5f9;
         }
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 18px;
-            margin-bottom: 25px;
         }
 
         .stat-card,
         .report-card {
-            background: #142035;
-            border: 1px solid #26344d;
-            border-radius: 12px;
-            padding: 22px;
-            margin-bottom: 22px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+        }
+
+        .stat-card {
+            padding: 23px;
         }
 
         .stat-label {
-            color: #94a3b8;
-            font-size: 14px;
-            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 12px;
         }
 
         .stat-number {
-            font-size: 34px;
+            color: var(--primary);
+            font-size: 36px;
             font-weight: bold;
-            color: #38bdf8;
         }
 
         .danger {
-            color: #f87171;
+            color: var(--danger);
+        }
+
+        .report-card {
+            padding: 24px;
+            margin-bottom: 18px;
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 17px;
+            margin-bottom: 18px;
         }
 
         .table-wrapper {
@@ -102,23 +203,36 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 300px;
         }
 
         th,
         td {
             text-align: left;
-            padding: 13px;
-            border-bottom: 1px solid #26344d;
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
         }
 
         th {
-            color: #38bdf8;
-            font-weight: bold;
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
         }
 
         td {
-            color: #e5e7eb;
+            color: var(--text);
+            font-size: 14px;
             overflow-wrap: anywhere;
+        }
+
+        td:last-child,
+        th:last-child {
+            text-align: right;
+        }
+
+        tbody tr:hover {
+            background: var(--panel-light);
         }
 
         tr:last-child td {
@@ -126,30 +240,40 @@
         }
 
         .empty {
-            color: #94a3b8;
-            text-align: center;
+            color: var(--muted);
+            text-align: center !important;
         }
 
         footer {
             text-align: center;
-            color: #94a3b8;
-            font-size: 13px;
-            margin-top: 30px;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 35px;
+            padding: 20px;
+            border-top: 1px solid var(--border);
         }
 
         @media (max-width: 600px) {
             body {
-                padding: 15px;
+                padding: 15px 10px;
             }
 
             header,
-            .stat-card,
             .report-card {
-                padding: 17px;
+                padding: 19px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
             }
 
             .stat-number {
-                font-size: 28px;
+                font-size: 30px;
+            }
+
+            .header-bottom {
+                align-items: flex-start;
+                flex-direction: column;
             }
         }
     </style>
@@ -160,39 +284,58 @@
     <div class="container">
 
         <header>
-            <h1>{{TEAM_NAME}} Traffic Report</h1>
+
+            <div class="top-line">
+                <div class="brand">{{TEAM_NAME}} / Monitoring</div>
+                <div class="live-indicator">Traffic Analytics</div>
+            </div>
+
+            <h1>Website Traffic Report</h1>
 
             <p class="subtitle">
-                Website traffic and visitor analytics
+                Server access statistics and visitor activity overview
             </p>
 
-            <p class="subtitle">
-                Last generated: {{GENERATED_AT}}
-            </p>
+            <div class="header-bottom">
 
-            <nav class="navigation">
-                <a href="/">Home</a>
-                <a href="/live/status.html">Live Status</a>
-            </nav>
+                <nav class="navigation">
+                    <a class="nav-button main-button" href="/">
+                        ← Back to Main Website
+                    </a>
+
+                    <a class="nav-button status-button" href="/live/status.html">
+                        View Live Status
+                    </a>
+                </nav>
+
+                <div class="generated">
+                    Last generated: {{GENERATED_AT}}
+                </div>
+
+            </div>
+
         </header>
 
-        <!-- Traffic Summary -->
+        <h2 class="section-heading">Traffic Overview</h2>
+
         <section class="stats">
 
             <div class="stat-card">
-                <p class="stat-label">Total Requests</p>
+                <p class="stat-label">TOTAL REQUESTS</p>
                 <div class="stat-number">{{TOTAL_REQUESTS}}</div>
             </div>
 
             <div class="stat-card">
-                <p class="stat-label">404 Not Found</p>
+                <p class="stat-label">404 NOT FOUND ERRORS</p>
                 <div class="stat-number danger">{{NOT_FOUND}}</div>
             </div>
 
         </section>
 
-        <!-- Top Requested Pages -->
+        <h2 class="section-heading">Traffic Analytics</h2>
+
         <section class="report-card">
+
             <h2>Top 5 Requested Pages</h2>
 
             <div class="table-wrapper">
@@ -209,10 +352,11 @@
                     </tbody>
                 </table>
             </div>
+
         </section>
 
-        <!-- Top Visitors -->
         <section class="report-card">
+
             <h2>Top 5 Visitors by IP Address</h2>
 
             <div class="table-wrapper">
@@ -229,10 +373,11 @@
                     </tbody>
                 </table>
             </div>
+
         </section>
 
-        <!-- Missing Pages -->
         <section class="report-card">
+
             <h2>Top 5 Missing Pages (404)</h2>
 
             <div class="table-wrapper">
@@ -249,11 +394,12 @@
                     </tbody>
                 </table>
             </div>
+
         </section>
 
         <footer>
-            <p>Automation Squad | Traffic Monitoring Dashboard</p>
-            <p>Automatically refreshes every 5 minutes.</p>
+            <p>{{TEAM_NAME}} | Traffic Monitoring Dashboard</p>
+            <p>Automatically updated every 5 minutes by the server.</p>
         </footer>
 
     </div>
