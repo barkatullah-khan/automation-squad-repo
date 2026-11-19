@@ -1,14 +1,24 @@
+
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
 
-# Locate script directory
+# Locate the script directory
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 # Load configuration
 source "$SCRIPT_DIR/team.conf"
 
-# Create live directory
+# Locate the HTML template
+TEMPLATE_FILE="$SCRIPT_DIR/status-template.html"
+
+# Check that the template exists
+if [[ ! -f "$TEMPLATE_FILE" ]]; then
+    echo "ERROR: Status template not found: $TEMPLATE_FILE" >&2
+    exit 1
+fi
+
+# Create the live directory
 mkdir -p "$LIVE_DIR"
 
 # Collect server information
@@ -30,148 +40,86 @@ else
 fi
 
 # Identify current release
-if [ -L "$CURRENT_DIR" ]; then
+if [[ -L "$CURRENT_DIR" ]]; then
     RELEASE_VALUE="$(readlink -f "$CURRENT_DIR")"
 else
     RELEASE_VALUE="$CURRENT_DIR"
 fi
 
-# Check warnings
+# Check system warnings
 WARNING="No warnings"
 
 if (( DISK_PERCENT >= DISK_WARNING_THRESHOLD )); then
     WARNING="Warning: Disk usage is above ${DISK_WARNING_THRESHOLD}%"
 fi
 
-if [ "$NGINX_STATUS" != "Running" ]; then
-    WARNING="${WARNING}. Nginx is not running."
+if [[ "$NGINX_STATUS" != "Running" ]]; then
+    if [[ "$WARNING" == "No warnings" ]]; then
+        WARNING="Nginx is not running."
+    else
+        WARNING="${WARNING}. Nginx is not running."
+    fi
+fi
+
+# Determine overall system status
+if [[ "$WARNING" == "No warnings" ]]; then
+    OVERALL_STATUS="Operational"
+else
+    OVERALL_STATUS="Attention Required"
 fi
 
 # Get latest five deployment entries
-if [ -f "$DEPLOY_LOG" ]; then
+if [[ -f "$DEPLOY_LOG" ]]; then
     DEPLOY_HISTORY="$(tail -n 5 "$DEPLOY_LOG")"
 else
     DEPLOY_HISTORY="No deployment log found."
 fi
 
-# Escape values before inserting them into HTML
-html_escape() {
-    local value="$1"
-    value="${value//&/&amp;}"
-    value="${value//</&lt;}"
-    value="${value//>/&gt;}"
-    value="${value//\"/&quot;}"
-    value="${value//\'/&#39;}"
-    printf '%s' "$value"
+# Export collected values for the HTML renderer
+export TEAM_NAME
+export HOSTNAME_VALUE
+export GENERATED_AT
+export UPTIME_VALUE
+export LOAD_VALUE
+export MEMORY_VALUE
+export DISK_VALUE
+export NGINX_STATUS
+export RELEASE_VALUE
+export WARNING
+export OVERALL_STATUS
+export DEPLOY_HISTORY
+
+# Generate the status HTML from the separate template
+python3 - "$TEMPLATE_FILE" "$STATUS_FILE" <<'PY'
+import html
+import os
+import sys
+from pathlib import Path
+
+template_file = Path(sys.argv[1])
+status_file = Path(sys.argv[2])
+
+template = template_file.read_text(encoding="utf-8")
+
+values = {
+    "{{TEAM_NAME}}": os.environ["TEAM_NAME"],
+    "{{GENERATED_AT}}": os.environ["GENERATED_AT"],
+    "{{OVERALL_STATUS}}": os.environ["OVERALL_STATUS"],
+    "{{HOSTNAME}}": os.environ["HOSTNAME_VALUE"],
+    "{{UPTIME}}": os.environ["UPTIME_VALUE"],
+    "{{LOAD}}": os.environ["LOAD_VALUE"],
+    "{{MEMORY}}": os.environ["MEMORY_VALUE"],
+    "{{DISK}}": os.environ["DISK_VALUE"],
+    "{{NGINX_STATUS}}": os.environ["NGINX_STATUS"],
+    "{{RELEASE}}": os.environ["RELEASE_VALUE"],
+    "{{WARNING}}": os.environ["WARNING"],
+    "{{DEPLOY_HISTORY}}": os.environ["DEPLOY_HISTORY"],
 }
 
-TEAM_NAME_HTML="$(html_escape "$TEAM_NAME")"
-HOSTNAME_HTML="$(html_escape "$HOSTNAME_VALUE")"
-GENERATED_AT_HTML="$(html_escape "$GENERATED_AT")"
-UPTIME_HTML="$(html_escape "$UPTIME_VALUE")"
-LOAD_HTML="$(html_escape "$LOAD_VALUE")"
-MEMORY_HTML="$(html_escape "$MEMORY_VALUE")"
-DISK_HTML="$(html_escape "$DISK_VALUE")"
-NGINX_HTML="$(html_escape "$NGINX_STATUS")"
-RELEASE_HTML="$(html_escape "$RELEASE_VALUE")"
-WARNING_HTML="$(html_escape "$WARNING")"
-DEPLOY_HISTORY_HTML="$(html_escape "$DEPLOY_HISTORY")"
+for placeholder, value in values.items():
+    template = template.replace(placeholder, html.escape(value))
 
-# Generate status HTML
-cat > "$STATUS_FILE" <<EOF
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="60">
-    <title>${TEAM_NAME_HTML} - Live Server Status</title>
+status_file.write_text(template, encoding="utf-8")
+PY
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f3f4f6;
-            margin: 0;
-            padding: 30px;
-            color: #1f2937;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: auto;
-        }
-
-        h1 {
-            color: #1d4ed8;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            margin: 15px 0;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px #00000012;
-        }
-
-        .warning {
-            color: #b45309;
-            font-weight: bold;
-        }
-
-        .success {
-            color: #15803d;
-            font-weight: bold;
-        }
-
-        pre {
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
-    </style>
-</head>
-
-<body>
-<div class="container">
-
-    <h1>${TEAM_NAME_HTML} - Live Server Status</h1>
-
-    <p>Last updated: ${GENERATED_AT_HTML}</p>
-
-    <div class="card">
-        <h2>Server Information</h2>
-        <p><strong>Hostname:</strong> ${HOSTNAME_HTML}</p>
-        <p><strong>Uptime:</strong> ${UPTIME_HTML}</p>
-        <p><strong>Load Average:</strong> ${LOAD_HTML}</p>
-        <p><strong>Memory:</strong> ${MEMORY_HTML}</p>
-        <p><strong>Disk Usage:</strong> ${DISK_HTML}</p>
-    </div>
-
-    <div class="card">
-        <h2>Service Status</h2>
-        <p><strong>Nginx:</strong>
-            <span class="$([ "$NGINX_STATUS" = "Running" ] && echo success || echo warning)">
-                ${NGINX_HTML}
-            </span>
-        </p>
-    </div>
-
-    <div class="card">
-        <h2>Deployment Information</h2>
-        <p><strong>Current Release:</strong> ${RELEASE_HTML}</p>
-        <h3>Latest Five Deployments</h3>
-        <pre>${DEPLOY_HISTORY_HTML}</pre>
-    </div>
-
-    <div class="card">
-        <h2>System Warnings</h2>
-        <p class="warning">${WARNING_HTML}</p>
-    </div>
-
-    <p>Page automatically refreshes every 60 seconds.</p>
-
-</div>
-</body>
-</html>
-EOF
-
-echo "Status page generated: $STATUS_FILE"
+echo "Status page generated successfully: $STATUS_FILE"
