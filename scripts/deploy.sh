@@ -72,6 +72,11 @@ echo "Generating live status page..."
 
 bash "$SCRIPTS/status.sh"
 
+# Generate traffic report
+echo "Generating traffic report..."
+
+bash "$SCRIPTS/traffic-report.sh"
+
 echo "Deployment completed successfully."
 echo "Backup: $BACKUP"
 echo "Commit: $COMMIT"
